@@ -20,9 +20,9 @@ export const IncidentBeacon: React.FC<IncidentBeaconProps> = ({
   const sevMeta = getSeverityMeta(incident.severity);
 
   // Determine pulse animation frequency and ring count based on severity
-  const isCritical = incident.severity === 'critical';
-  const isHigh = incident.severity === 'high';
-  const isMedium = incident.severity === 'medium';
+  const isCritical = incident.severity === 'Critical';
+  const isHigh = incident.severity === 'High';
+  const isMedium = incident.severity === 'Medium';
 
   const pulseDuration = isCritical ? 1.2 : isHigh ? 1.8 : isMedium ? 2.4 : 3.2;
 

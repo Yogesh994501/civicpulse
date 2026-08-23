@@ -12,8 +12,7 @@ import {
   Compass, 
   Radio, 
   Crosshair, 
-  ShieldAlert, 
-  Filter 
+  ShieldAlert 
 } from 'lucide-react';
 import { Incident } from '@/types/incident';
 
@@ -25,10 +24,10 @@ export const CivicMap: React.FC = () => {
     setTimelineModalIncident,
     radarScanning,
     setRadarScanning,
-    categoryFilter,
   } = useCivicPulse();
 
   const [activeSector, setActiveSector] = useState<string>('all');
+  const [videoError, setVideoError] = useState<boolean>(false);
 
   const handleMapBackgroundClick = () => {
     setSelectedIncident(null);
@@ -36,6 +35,26 @@ export const CivicMap: React.FC = () => {
 
   return (
     <div className="relative w-full rounded-2xl border border-white/10 bg-zinc-950/90 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+      {/* Optional Background Video Layer with Graceful Fallback */}
+      {!videoError && (
+        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            onError={() => setVideoError(true)}
+            className="w-full h-full object-cover opacity-40 mix-blend-screen"
+            style={{
+              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+            }}
+          >
+            <source src="/assets/city-radar-loop.mp4" type="video/mp4" />
+          </video>
+        </div>
+      )}
+
       {/* Map Header Toolbar */}
       <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: District Title & Telemetry */}
@@ -86,18 +105,16 @@ export const CivicMap: React.FC = () => {
       >
         {/* SVG Tactical Vector Map Layer */}
         <svg
-          className="absolute inset-0 w-full h-full pointer-events-none opacity-85"
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-85 z-10"
           xmlns="http://www.w3.org/2000/svg"
           preserveAspectRatio="none"
           viewBox="0 0 1000 600"
         >
           <defs>
-            {/* Hologram glow filter */}
             <filter id="cyan-glow" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation="3" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
-            {/* Radar Sweep Gradient */}
             <radialGradient id="radar-center-glow" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.15" />
               <stop offset="60%" stopColor="#06b6d4" stopOpacity="0.03" />
@@ -150,29 +167,10 @@ export const CivicMap: React.FC = () => {
           <line x1="500" y1="0" x2="500" y2="600" stroke="rgba(6, 182, 212, 0.12)" strokeWidth="1" strokeDasharray="8 4" />
           <line x1="0" y1="300" x2="1000" y2="300" stroke="rgba(6, 182, 212, 0.12)" strokeWidth="1" strokeDasharray="8 4" />
 
-          {/* Major Expressways & Transit Arteries */}
-          {/* Western Express Highway */}
-          <path
-            d="M 520,0 L 580,240 L 680,420 L 780,600"
-            fill="none"
-            stroke="rgba(245, 158, 11, 0.4)"
-            strokeWidth="3.5"
-          />
-          {/* Linking Road & SV Road */}
-          <path
-            d="M 320,0 L 360,180 L 420,380 L 460,600"
-            fill="none"
-            stroke="rgba(6, 182, 212, 0.35)"
-            strokeWidth="2.5"
-          />
-          {/* Bandra-Worli Sea Link / Coastal Approach */}
-          <path
-            d="M 220,280 C 240,400 320,520 400,600"
-            fill="none"
-            stroke="rgba(16, 185, 129, 0.35)"
-            strokeWidth="2"
-          />
-          {/* Secondary Arterial Grid Lines */}
+          {/* Major Expressways & Arteries */}
+          <path d="M 520,0 L 580,240 L 680,420 L 780,600" fill="none" stroke="rgba(245, 158, 11, 0.4)" strokeWidth="3.5" />
+          <path d="M 320,0 L 360,180 L 420,380 L 460,600" fill="none" stroke="rgba(6, 182, 212, 0.35)" strokeWidth="2.5" />
+          <path d="M 220,280 C 240,400 320,520 400,600" fill="none" stroke="rgba(16, 185, 129, 0.35)" strokeWidth="2" />
           <line x1="200" y1="180" x2="800" y2="180" stroke="rgba(255, 255, 255, 0.09)" strokeWidth="1" />
           <line x1="150" y1="380" x2="900" y2="380" stroke="rgba(255, 255, 255, 0.09)" strokeWidth="1" />
           <line x1="300" y1="100" x2="300" y2="500" stroke="rgba(255, 255, 255, 0.07)" strokeWidth="1" />
@@ -196,25 +194,25 @@ export const CivicMap: React.FC = () => {
           </text>
         </svg>
 
-        {/* Tactical Radar Sweep Holographic Beam */}
+        {/* Tactical Radar Sweep Beam */}
         {radarScanning && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-15">
             <div className="w-[850px] h-[850px] rounded-full radar-sweep-beam opacity-70 pointer-events-none" />
           </div>
         )}
 
         {/* Ambient Center Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none z-10" />
 
-        {/* Map Corner Monospace Telemetry Badges */}
-        <div className="absolute bottom-3 left-3 text-[10px] font-mono text-zinc-500 bg-black/70 px-2.5 py-1 rounded-lg border border-white/5 pointer-events-none flex items-center gap-3">
+        {/* Map Corner Telemetry Badges */}
+        <div className="absolute bottom-3 left-3 text-[10px] font-mono text-zinc-500 bg-black/70 px-2.5 py-1 rounded-lg border border-white/5 pointer-events-none flex items-center gap-3 z-30">
           <span>LAT: 19.0596° N</span>
           <span>LNG: 72.8295° E</span>
           <span className="text-cyan-400 font-bold">GRID: H-W-MUM</span>
         </div>
 
         {/* Category Legend in Bottom Right */}
-        <div className="hidden sm:flex absolute bottom-3 right-3 text-[10px] font-mono bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 pointer-events-none items-center gap-3">
+        <div className="hidden sm:flex absolute bottom-3 right-3 text-[10px] font-mono bg-black/85 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 pointer-events-none items-center gap-3 z-30">
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
             <span className="text-zinc-300">Road</span>
@@ -234,24 +232,29 @@ export const CivicMap: React.FC = () => {
         </div>
 
         {/* Incident Beacons Layer */}
-        {filteredIncidents.map((incident) => (
-          <IncidentBeacon
-            key={incident.id}
-            incident={incident}
-            isSelected={selectedIncident?.id === incident.id}
-            onSelect={(inc) => setSelectedIncident(inc)}
-          />
-        ))}
+        <div className="relative z-20 w-full h-full pointer-events-none">
+          {filteredIncidents.map((incident) => (
+            <div key={incident.id} className="pointer-events-auto">
+              <IncidentBeacon
+                incident={incident}
+                isSelected={selectedIncident?.id === incident.id}
+                onSelect={(inc) => setSelectedIncident(inc)}
+              />
+            </div>
+          ))}
+        </div>
 
-        {/* Selected Incident Floating Glassmorphic Tooltip */}
-        <BeaconTooltip
-          incident={selectedIncident}
-          onClose={() => setSelectedIncident(null)}
-          onOpenTimeline={(inc) => {
-            setSelectedIncident(null);
-            setTimelineModalIncident(inc);
-          }}
-        />
+        {/* Selected Incident Floating Tooltip */}
+        <div className="relative z-30 pointer-events-auto">
+          <BeaconTooltip
+            incident={selectedIncident}
+            onClose={() => setSelectedIncident(null)}
+            onOpenTimeline={(inc) => {
+              setSelectedIncident(null);
+              setTimelineModalIncident(inc);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

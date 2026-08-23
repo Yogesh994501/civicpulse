@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { useCivicPulse } from '@/context/CivicPulseContext';
 import { Category, IncidentStatus } from '@/types/incident';
 import { SearchInput } from './SearchInput';
@@ -27,37 +26,37 @@ export const FilterBar: React.FC = () => {
     filteredIncidents,
   } = useCivicPulse();
 
-  const categories: { id: 'all' | Category; label: string; icon: any; colorClass: string; activeClass: string }[] = [
+  const categories: { id: 'All' | Category; label: string; icon: any; colorClass: string; activeClass: string }[] = [
     {
-      id: 'all',
+      id: 'All',
       label: 'All Issues',
       icon: Layers,
       colorClass: 'text-zinc-400',
       activeClass: 'bg-white/10 text-white border-white/30 shadow-[0_0_15px_rgba(255,255,255,0.15)]',
     },
     {
-      id: 'road_repairs',
+      id: 'Road Repairs',
       label: 'Road Repairs',
       icon: AlertTriangle,
       colorClass: 'text-amber-400',
       activeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)]',
     },
     {
-      id: 'waste_management',
+      id: 'Waste Management',
       label: 'Waste Management',
       icon: Trash2,
       colorClass: 'text-emerald-400',
       activeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.25)]',
     },
     {
-      id: 'streetlighting',
+      id: 'Streetlighting',
       label: 'Streetlighting',
       icon: Lightbulb,
       colorClass: 'text-cyan-400',
       activeClass: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.25)]',
     },
     {
-      id: 'park_maintenance',
+      id: 'Park Maintenance',
       label: 'Park Maintenance',
       icon: Trees,
       colorClass: 'text-rose-400',
@@ -65,11 +64,11 @@ export const FilterBar: React.FC = () => {
     },
   ];
 
-  const statuses: { id: 'all' | IncidentStatus; label: string; icon: any }[] = [
-    { id: 'all', label: 'All Statuses', icon: SlidersHorizontal },
-    { id: 'pending', label: 'Dispatched', icon: Truck },
-    { id: 'in_progress', label: 'Investigating', icon: Clock },
-    { id: 'resolved', label: 'Fixed', icon: CheckCircle2 },
+  const statuses: { id: 'All' | IncidentStatus; label: string; icon: any }[] = [
+    { id: 'All', label: 'All', icon: SlidersHorizontal },
+    { id: 'Pending', label: 'Pending', icon: Truck },
+    { id: 'In Progress', label: 'In Progress', icon: Clock },
+    { id: 'Resolved', label: 'Resolved', icon: CheckCircle2 },
   ];
 
   return (
@@ -120,7 +119,7 @@ export const FilterBar: React.FC = () => {
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isSelected = categoryFilter === cat.id;
-          const count = cat.id === 'all'
+          const count = cat.id === 'All'
             ? incidents.length
             : incidents.filter((i) => i.category === cat.id).length;
 

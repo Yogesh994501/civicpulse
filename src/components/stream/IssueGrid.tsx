@@ -16,8 +16,8 @@ export const IssueGrid: React.FC = () => {
   } = useCivicPulse();
 
   const resetFilters = () => {
-    setCategoryFilter('all');
-    setStatusFilter('all');
+    setCategoryFilter('All');
+    setStatusFilter('All');
     setSearchQuery('');
   };
 
@@ -66,7 +66,7 @@ export const IssueGrid: React.FC = () => {
           <AnimatePresence mode="popLayout">
             {filteredIncidents.map((incident, index) => {
               // Feature the first critical incident if present
-              const isFirstFeatured = index === 0 && incident.severity === 'critical';
+              const isFirstFeatured = index === 0 && incident.severity === 'Critical';
               return (
                 <IssueCard
                   key={incident.id}

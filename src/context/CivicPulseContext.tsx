@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Incident, Category, IncidentStatus, KPIStats, TelemetryLog } from '@/types/incident';
+import { Incident, Category, Severity, IncidentStatus, KPIStats, TelemetryLog } from '@/types/incident';
 import { INITIAL_INCIDENTS, INITIAL_KPIS } from '@/data/mockIncidents';
 
 interface ToastData {
@@ -20,23 +20,23 @@ interface CivicPulseContextType {
   setTimelineModalIncident: (incident: Incident | null) => void;
   isReportDrawerOpen: boolean;
   setIsReportDrawerOpen: (open: boolean) => void;
-  categoryFilter: 'all' | Category;
-  setCategoryFilter: (category: 'all' | Category) => void;
-  statusFilter: 'all' | IncidentStatus;
-  setStatusFilter: (status: 'all' | IncidentStatus) => void;
+  categoryFilter: 'All' | Category;
+  setCategoryFilter: (category: 'All' | Category) => void;
+  statusFilter: 'All' | IncidentStatus;
+  setStatusFilter: (status: 'All' | IncidentStatus) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   upvoteIncident: (id: string) => void;
   addNewIncident: (data: {
     title: string;
     category: Category;
-    severity: 'critical' | 'high' | 'medium' | 'low';
+    severity: Severity;
     neighborhood: string;
     streetName: string;
     coordinates: string;
     description: string;
     photoUrl?: string;
-  }) => void;
+  }) => boolean;
   kpis: KPIStats;
   telemetryLogs: TelemetryLog[];
   toast: ToastData | null;
@@ -53,8 +53,8 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [timelineModalIncident, setTimelineModalIncident] = useState<Incident | null>(null);
   const [isReportDrawerOpen, setIsReportDrawerOpen] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState<'all' | Category>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | IncidentStatus>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'All' | Category>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | IncidentStatus>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [radarScanning, setRadarScanning] = useState(true);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -66,7 +66,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       type: 'dispatch',
       message: 'Crew CR-04 compacting hot-mix bitumen at Linking Road Junction.',
       incidentId: 'CP-8402',
-      category: 'road_repairs',
+      category: 'Road Repairs',
     },
     {
       id: 'log-2',
@@ -74,7 +74,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       type: 'status_change',
       message: 'Hydraulic Compactor SW-12 reported arrival at Khar 14th Road.',
       incidentId: 'CP-8395',
-      category: 'waste_management',
+      category: 'Waste Management',
     },
     {
       id: 'log-3',
@@ -82,7 +82,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       type: 'sla_warning',
       message: 'Emergency De-watering Unit DR-01 locked manhole grid on LBS Marg.',
       incidentId: 'CP-8344',
-      category: 'road_repairs',
+      category: 'Road Repairs',
     },
   ]);
 
@@ -99,15 +99,15 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setToast(null);
   }, []);
 
-  // 1-second live countdown timer for SLAs
+  // 1-second interval ticking down SLA remaining times
   useEffect(() => {
     const timer = setInterval(() => {
       setIncidents((prev) =>
         prev.map((inc) => {
-          if (inc.status === 'resolved' || inc.slaRemainingSeconds <= 0) return inc;
+          if (inc.status === 'Resolved' || inc.slaRemaining <= 0) return inc;
           return {
             ...inc,
-            slaRemainingSeconds: Math.max(0, inc.slaRemainingSeconds - 1),
+            slaRemaining: Math.max(0, inc.slaRemaining - 1),
           };
         })
       );
@@ -115,14 +115,14 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => clearInterval(timer);
   }, []);
 
-  // Simulated periodic telemetry updates (every 22 seconds)
+  // Periodic telemetry updates (every 22 seconds)
   useEffect(() => {
     const telemetryInterval = setInterval(() => {
       const messages = [
-        { text: 'Smart City CMS lumen telemetry stabilized on Bandra grid.', type: 'status_change' as const, cat: 'streetlighting' as Category },
-        { text: 'Automated civic triage processed 3 citizen validation votes.', type: 'report' as const, cat: 'park_maintenance' as Category },
-        { text: 'Rapid Asphalt Unit #02 completed thermal scanning on SV Road.', type: 'dispatch' as const, cat: 'road_repairs' as Category },
-        { text: 'H-West Ward Command synchronized 14 active GPS field units.', type: 'dispatch' as const, cat: 'waste_management' as Category },
+        { text: 'Smart City CMS lumen telemetry stabilized on Bandra grid.', type: 'status_change' as const, cat: 'Streetlighting' as Category },
+        { text: 'Automated civic triage processed 3 citizen validation votes.', type: 'report' as const, cat: 'Park Maintenance' as Category },
+        { text: 'Rapid Asphalt Unit #02 completed thermal scanning on SV Road.', type: 'dispatch' as const, cat: 'Road Repairs' as Category },
+        { text: 'H-West Ward Command synchronized 14 active GPS field units.', type: 'dispatch' as const, cat: 'Waste Management' as Category },
       ];
       const randomMsg = messages[Math.floor(Math.random() * messages.length)];
       const newLog: TelemetryLog = {
@@ -138,7 +138,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => clearInterval(telemetryInterval);
   }, []);
 
-  // Upvoting handler
+  // Upvoting handler: first click increments and activates, second click decrements
   const upvoteIncident = useCallback((id: string) => {
     setIncidents((prev) =>
       prev.map((inc) => {
@@ -155,7 +155,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
     );
 
-    // Keep selectedIncident synchronized
+    // Keep selectedIncident in sync
     setSelectedIncident((prev) => {
       if (prev && prev.id === id) {
         const isUpvoted = prev.hasUserUpvoted;
@@ -174,46 +174,50 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     (data: {
       title: string;
       category: Category;
-      severity: 'critical' | 'high' | 'medium' | 'low';
+      severity: Severity;
       neighborhood: string;
       streetName: string;
       coordinates: string;
       description: string;
       photoUrl?: string;
-    }) => {
+    }): boolean => {
+      if (!data.title.trim() || !data.description.trim() || !data.streetName.trim()) {
+        showToast('Validation Error', 'Please complete all required fields.', 'alert');
+        return false;
+      }
+
       const newIdNumber = Math.floor(1000 + Math.random() * 9000);
       const newId = `CP-${newIdNumber}`;
       
       const defaultCrewMap: Record<Category, { unitId: string; crewName: string; membersCount: number; vehicleType: string }> = {
-        road_repairs: { unitId: `CR-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Rapid Asphalt Taskforce', membersCount: 5, vehicleType: 'Pavement Roller & Patch Rig' },
-        waste_management: { unitId: `SW-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Solid Waste Rapid Cleansing', membersCount: 4, vehicleType: 'Compactor Truck' },
-        streetlighting: { unitId: `LT-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Power & Luminaire Repair', membersCount: 3, vehicleType: 'Bucket Crane Van' },
-        park_maintenance: { unitId: `PK-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Parks & Infrastructure Crew', membersCount: 4, vehicleType: 'Municipal Utility Truck' },
+        'Road Repairs': { unitId: `CR-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Rapid Asphalt Taskforce', membersCount: 5, vehicleType: 'Pavement Roller & Patch Rig' },
+        'Waste Management': { unitId: `SW-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Solid Waste Rapid Cleansing', membersCount: 4, vehicleType: 'Compactor Truck' },
+        'Streetlighting': { unitId: `LT-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Power & Luminaire Repair', membersCount: 3, vehicleType: 'Bucket Crane Van' },
+        'Park Maintenance': { unitId: `PK-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Parks & Infrastructure Crew', membersCount: 4, vehicleType: 'Municipal Utility Truck' },
       };
 
       const crew = defaultCrewMap[data.category];
-
-      // Coordinates random offset within map visual bounds
       const randomX = Math.floor(20 + Math.random() * 60);
       const randomY = Math.floor(20 + Math.random() * 60);
 
-      const slaHours = data.severity === 'critical' ? 4 : data.severity === 'high' ? 6 : data.severity === 'medium' ? 12 : 24;
-      const slaTotalSeconds = slaHours * 3600;
+      const slaHours = data.severity === 'Critical' ? 4 : data.severity === 'High' ? 6 : data.severity === 'Medium' ? 12 : 24;
+      const slaTotal = slaHours * 3600;
 
       const newIncident: Incident = {
         id: newId,
         title: data.title,
         category: data.category,
         severity: data.severity,
-        status: 'pending',
+        status: 'Pending',
         neighborhood: data.neighborhood,
         streetName: data.streetName,
         coordinates: data.coordinates,
         mapPosition: { x: randomX, y: randomY },
-        reportedAt: new Date().toISOString(),
-        slaTotalSeconds,
-        slaRemainingSeconds: slaTotalSeconds,
-        assignedCrew: {
+        reportedAt: new Date(),
+        slaTotal,
+        slaRemaining: slaTotal,
+        assignedCrew: `${crew.unitId}: ${crew.crewName}`,
+        assignedCrewDetails: {
           ...crew,
           status: 'Dispatched',
         },
@@ -225,72 +229,54 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           {
             id: `t-${Date.now()}-1`,
             stepNumber: 1,
-            stage: 'Citizen Issue Reported',
+            stage: 'Citizen Report Submitted',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' IST',
             relativeTime: 'Just now',
-            status: 'completed',
-            responsibleTeam: 'Citizen Dispatch Portal',
-            description: 'Incident verified and registered on live municipal radar stream.',
+            status: 'Completed',
+            assignedTeam: 'Citizen Dispatch Portal',
+            description: 'Incident verified and registered on live municipal radar stream with citizen photo telemetry.',
           },
           {
             id: `t-${Date.now()}-2`,
             stepNumber: 2,
-            stage: 'AI Computer Vision & Severity Triage',
+            stage: 'Municipal Triage & AI Verification',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' IST',
             relativeTime: 'Just now',
-            status: 'completed',
-            responsibleTeam: 'Pulse AI Vision Core',
-            description: `Automated triage marked priority [${data.severity.toUpperCase()}]. Target SLA: ${slaHours}h.`,
+            status: 'Completed',
+            assignedTeam: 'Pulse AI Vision Core',
+            description: `Automated triage assigned [${data.severity.toUpperCase()}] priority. Target SLA: ${slaHours}h.`,
           },
           {
             id: `t-${Date.now()}-3`,
             stepNumber: 3,
-            stage: 'Emergency Dispatch Assignment',
+            stage: 'Crew Dispatched & Live Telemetry Locked',
             timestamp: 'In Progress',
             relativeTime: 'Est. 10m',
-            status: 'in_progress',
-            responsibleTeam: crew.crewName,
-            description: `Unit ${crew.unitId} assigned with ${crew.membersCount} crew specialists.`,
+            status: 'In Progress',
+            assignedTeam: crew.crewName,
+            description: `Unit ${crew.unitId} mobilized with ${crew.membersCount} crew specialists.`,
+            crewGpsBadge: {
+              unitId: crew.unitId,
+              crewName: crew.crewName,
+              leadName: 'Field Duty Lead',
+              coordinates: data.coordinates,
+              status: 'EN ROUTE · DISPATCH ACTIVE',
+              speedKmh: 20,
+            },
           },
           {
             id: `t-${Date.now()}-4`,
             stepNumber: 4,
-            stage: 'Field Crew Arrival & Inspection',
-            timestamp: 'Pending',
-            relativeTime: 'Est. 30m',
-            status: 'pending',
-            responsibleTeam: crew.crewName,
-            description: 'On-site technical evaluation and containment setup.',
-          },
-          {
-            id: `t-${Date.now()}-5`,
-            stepNumber: 5,
-            stage: 'Physical Repair & Execution',
-            timestamp: 'Pending',
-            relativeTime: `Est. ${Math.round(slaHours * 0.6)}h`,
-            status: 'pending',
-            responsibleTeam: 'Operations Field Taskforce',
-            description: 'Core infrastructure restoration and remediation work.',
-          },
-          {
-            id: `t-${Date.now()}-6`,
-            stepNumber: 6,
-            stage: 'Quality & Safety Certification',
-            timestamp: 'Pending',
-            relativeTime: `Est. ${Math.round(slaHours * 0.85)}h`,
-            status: 'pending',
-            responsibleTeam: 'Municipal QA Engineer',
-            description: 'Inspection and verification against civic safety standards.',
-          },
-          {
-            id: `t-${Date.now()}-7`,
-            stepNumber: 7,
-            stage: 'Citizen Re-confirmation & Closeout',
+            stage: 'Field Resolution & Before/After Photo Verification',
             timestamp: 'Pending',
             relativeTime: `Est. ${slaHours}h`,
-            status: 'pending',
-            responsibleTeam: 'Citizen Feedback Engine',
-            description: 'Digital resolution broadcast and closure sign-off.',
+            status: 'Pending',
+            assignedTeam: 'Municipal Field Operations',
+            description: 'Physical inspection and remediation work pending field taskforce deployment.',
+            photoVerification: {
+              beforeUrl: data.photoUrl || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80',
+              verifiedNote: 'Site remediation target queued in dispatch queue.',
+            },
           },
         ],
       };
@@ -298,7 +284,6 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIncidents((prev) => [newIncident, ...prev]);
       setSelectedIncident(newIncident);
 
-      // Add log
       const newLog: TelemetryLog = {
         id: `log-${Date.now()}`,
         timestamp: 'Just now',
@@ -314,6 +299,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         `Assigned to ${crew.crewName} in ${data.neighborhood}. Beacon added to radar map.`,
         'success'
       );
+      return true;
     },
     [showToast]
   );
@@ -321,12 +307,12 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Dynamic KPI computation based on incidents
   const kpis: KPIStats = useMemo(() => {
     const total = incidents.length;
-    const resolved = incidents.filter((i) => i.status === 'resolved').length;
-    const critical = incidents.filter((i) => i.severity === 'critical' && i.status !== 'resolved').length;
+    const resolved = incidents.filter((i) => i.status === 'Resolved').length;
+    const critical = incidents.filter((i) => i.severity === 'Critical' && i.status !== 'Resolved').length;
     const calculatedRate = total > 0 ? Math.round((resolved / total) * 100) : 84;
     
     return {
-      resolutionRate: Math.max(78, calculatedRate + 25), // realistic weighted municipal rate
+      resolutionRate: Math.max(78, calculatedRate + 25),
       resolutionDelta: 6.2,
       avgSlaHours: 3.8,
       isSlaImproving: true,
@@ -335,11 +321,11 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, [incidents]);
 
-  // Filtered incidents calculation
+  // Filtered incidents
   const filteredIncidents = useMemo(() => {
     return incidents.filter((inc) => {
-      const matchesCategory = categoryFilter === 'all' || inc.category === categoryFilter;
-      const matchesStatus = statusFilter === 'all' || inc.status === statusFilter;
+      const matchesCategory = categoryFilter === 'All' || inc.category === categoryFilter;
+      const matchesStatus = statusFilter === 'All' || inc.status === statusFilter;
       
       const query = searchQuery.trim().toLowerCase();
       const matchesSearch =

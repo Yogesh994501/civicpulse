@@ -6,7 +6,8 @@ import { Incident } from '@/types/incident';
 import { 
   getCategoryMeta, 
   getSeverityMeta, 
-  getStatusMeta 
+  getStatusMeta, 
+  getRelativeTimeString 
 } from '@/utils/categoryHelpers';
 import { StatusBadge } from './StatusBadge';
 import { SLAProgress } from './SLAProgress';
@@ -16,8 +17,7 @@ import {
   ArrowRight, 
   Users2, 
   Clock, 
-  Radio, 
-  ExternalLink 
+  Radio 
 } from 'lucide-react';
 import { useCivicPulse } from '@/context/CivicPulseContext';
 
@@ -32,16 +32,6 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
   const catMeta = getCategoryMeta(incident.category);
   const sevMeta = getSeverityMeta(incident.severity);
   const CategoryIcon = catMeta.icon;
-
-  // Calculate relative time string based on reportedAt
-  const getRelativeTimeDisplay = () => {
-    const diffMs = Date.now() - new Date(incident.reportedAt).getTime();
-    const diffMins = Math.floor(diffMs / (60 * 1000));
-    if (diffMins < 1) return 'Reported just now';
-    if (diffMins < 60) return `Reported ${diffMins}m ago`;
-    const diffHrs = Math.floor(diffMins / 60);
-    return `Reported ${diffHrs}h ${diffMins % 60}m ago`;
-  };
 
   return (
     <motion.div
@@ -124,7 +114,7 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
               <span>{incident.coordinates}</span>
               <span className="text-zinc-400 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-zinc-500" />
-                {getRelativeTimeDisplay()}
+                {getRelativeTimeString(incident.reportedAt)}
               </span>
             </div>
           </div>
@@ -135,11 +125,11 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
           <div className="flex items-center gap-2 truncate">
             <Users2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="text-zinc-400 text-[11px] truncate">
-              Unit: <span className="text-zinc-200 font-semibold">{incident.assignedCrew.unitId}</span> ({incident.assignedCrew.crewName})
+              Unit: <span className="text-zinc-200 font-semibold">{incident.assignedCrewDetails.unitId}</span> ({incident.assignedCrewDetails.crewName})
             </span>
           </div>
           <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-zinc-300 border border-white/10 shrink-0">
-            {incident.assignedCrew.status.toUpperCase()}
+            {incident.assignedCrewDetails.status.toUpperCase()}
           </span>
         </div>
 
@@ -147,16 +137,16 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
         <div className="mt-4">
           <SLAProgress
             category={incident.category}
-            totalSeconds={incident.slaTotalSeconds}
-            remainingSeconds={incident.slaRemainingSeconds}
-            isResolved={incident.status === 'resolved'}
+            totalSeconds={incident.slaTotal}
+            remainingSeconds={incident.slaRemaining}
+            isResolved={incident.status === 'Resolved'}
           />
         </div>
       </div>
 
       {/* Card Footer: Upvote Engagement & Timeline Action */}
       <div className="mt-5 pt-3.5 border-t border-white/5 flex items-center justify-between gap-3">
-        {/* Upvote Button */}
+        {/* Upvote Button with Session Toggle */}
         <button
           onClick={() => upvoteIncident(incident.id)}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono transition-all duration-200 ${
@@ -175,7 +165,7 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
           <span className="hidden sm:inline text-zinc-400">Upvotes</span>
         </button>
 
-        {/* Action: View Resolution Timeline */}
+        {/* Actions: Focus & View Timeline */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setSelectedIncident(incident)}
@@ -189,7 +179,7 @@ export const IssueCard: React.FC<IssueCardProps> = ({ incident, isFeatured = fal
             onClick={() => setTimelineModalIncident(incident)}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-medium transition-all group/btn shadow-sm"
           >
-            <span>View Timeline</span>
+            <span>View Resolution Timeline</span>
             <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover/btn:text-white group-hover/btn:translate-x-0.5 transition-transform" />
           </button>
         </div>

@@ -134,7 +134,7 @@ export const BeaconTooltip: React.FC<BeaconTooltipProps> = ({
             <div className="flex items-center gap-1.5 mt-0.5 truncate">
               <Users2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span className="text-zinc-200 text-[11px] truncate">
-                {incident.assignedCrew.unitId} ({incident.assignedCrew.status})
+                {incident.assignedCrewDetails.unitId} ({incident.assignedCrewDetails.status})
               </span>
             </div>
           </div>
@@ -147,10 +147,10 @@ export const BeaconTooltip: React.FC<BeaconTooltipProps> = ({
             </div>
             <span
               className={`font-mono text-xs font-bold ${
-                incident.slaRemainingSeconds < 1800 ? 'text-rose-400' : 'text-cyan-300'
+                incident.slaRemaining < 1800 ? 'text-rose-400' : 'text-cyan-300'
               }`}
             >
-              {formatSecondsToCountdown(incident.slaRemainingSeconds)}
+              {formatSecondsToCountdown(incident.slaRemaining)}
             </span>
           </div>
         </div>

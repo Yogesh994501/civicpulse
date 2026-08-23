@@ -7,19 +7,19 @@ import { Category, Severity } from '@/types/incident';
 import { CategorySelector } from './steps/CategorySelector';
 import { LocationStep } from './steps/LocationStep';
 import { IssueDetailsStep } from './steps/IssueDetailsStep';
-import { X, ShieldAlert, Sparkles, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 
 export const ReportIssueDrawer: React.FC = () => {
   const { isReportDrawerOpen, setIsReportDrawerOpen, addNewIncident } = useCivicPulse();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [category, setCategory] = useState<Category>('road_repairs');
+  const [category, setCategory] = useState<Category>('Road Repairs');
   const [neighborhood, setNeighborhood] = useState<string>('Bandra West');
   const [streetName, setStreetName] = useState<string>('Hill Road, Near Mehboob Studio');
   const [coordinates, setCoordinates] = useState<string>('19.0559° N, 72.8280° E');
   const [photoUrl, setPhotoUrl] = useState<string>('');
   const [title, setTitle] = useState<string>('');
-  const [severity, setSeverity] = useState<Severity>('high');
+  const [severity, setSeverity] = useState<Severity>('High');
   const [description, setDescription] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -34,13 +34,13 @@ export const ReportIssueDrawer: React.FC = () => {
 
   const resetForm = () => {
     setStep(1);
-    setCategory('road_repairs');
+    setCategory('Road Repairs');
     setNeighborhood('Bandra West');
     setStreetName('Hill Road, Near Mehboob Studio');
     setCoordinates('19.0559° N, 72.8280° E');
     setPhotoUrl('');
     setTitle('');
-    setSeverity('high');
+    setSeverity('High');
     setDescription('');
     setIsSubmitting(false);
   };
@@ -55,7 +55,7 @@ export const ReportIssueDrawer: React.FC = () => {
 
     setIsSubmitting(true);
     setTimeout(() => {
-      addNewIncident({
+      const success = addNewIncident({
         title,
         category,
         severity,
@@ -66,8 +66,12 @@ export const ReportIssueDrawer: React.FC = () => {
         photoUrl: photoUrl || undefined,
       });
 
-      setIsSubmitting(false);
-      handleClose();
+      if (success) {
+        setIsSubmitting(false);
+        handleClose();
+      } else {
+        setIsSubmitting(false);
+      }
     }, 600);
   };
 

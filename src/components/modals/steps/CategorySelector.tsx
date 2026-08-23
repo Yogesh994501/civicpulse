@@ -18,7 +18,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 }) => {
   const options: { id: Category; name: string; desc: string; icon: any; color: string; border: string; bg: string; glow: string }[] = [
     {
-      id: 'road_repairs',
+      id: 'Road Repairs',
       name: 'Road Repairs',
       desc: 'Potholes, road subsidence, waterlogging, broken curbs',
       icon: AlertTriangle,
@@ -28,7 +28,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       glow: 'shadow-[0_0_25px_rgba(245,158,11,0.25)]',
     },
     {
-      id: 'waste_management',
+      id: 'Waste Management',
       name: 'Waste Management',
       desc: 'Overflowing dumpsters, debris dumping, drain blockage',
       icon: Trash2,
@@ -38,7 +38,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       glow: 'shadow-[0_0_25px_rgba(16,185,129,0.25)]',
     },
     {
-      id: 'streetlighting',
+      id: 'Streetlighting',
       name: 'Streetlighting',
       desc: 'Blown luminaires, dark corridors, short-circuit hazards',
       icon: Lightbulb,
@@ -48,7 +48,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
       glow: 'shadow-[0_0_25px_rgba(6,182,212,0.25)]',
     },
     {
-      id: 'park_maintenance',
+      id: 'Park Maintenance',
       name: 'Park Maintenance',
       desc: 'Damaged play gear, fallen tree limbs, fence fractures',
       icon: Trees,

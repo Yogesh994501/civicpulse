@@ -3,7 +3,7 @@
 import React from 'react';
 import { Severity } from '@/types/incident';
 import { getSeverityMeta } from '@/utils/categoryHelpers';
-import { AlertOctagon, Send, ShieldAlert, Sparkles } from 'lucide-react';
+import { AlertOctagon, Send } from 'lucide-react';
 
 interface IssueDetailsStepProps {
   title: string;
@@ -28,7 +28,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const severities: Severity[] = ['low', 'medium', 'high', 'critical'];
+  const severities: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
   const sevMeta = getSeverityMeta(severity);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +52,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
       {/* Issue Title Input */}
       <div className="space-y-1.5">
         <label className="text-xs font-mono uppercase text-zinc-400 block">
-          Incident Title / Brief Headline <span className="text-rose-400">*</span>
+          Incident Title / Headline <span className="text-rose-400">*</span>
         </label>
         <input
           type="text"
@@ -69,7 +69,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
           <div className="flex items-center gap-2">
             <AlertOctagon className="w-4 h-4 text-amber-400" />
             <span className="text-xs font-mono font-bold text-white">
-              URGENCY / SEVERITY SLIDER
+              URGENCY SLIDER
             </span>
           </div>
 
@@ -95,17 +95,17 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
 
           {/* Step Labels */}
           <div className="flex justify-between text-[11px] font-mono text-zinc-500 pt-1">
-            <span className={severity === 'low' ? 'text-zinc-300 font-bold' : ''}>
-              Low (24h SLA)
+            <span className={severity === 'Low' ? 'text-zinc-300 font-bold' : ''}>
+              Low
             </span>
-            <span className={severity === 'medium' ? 'text-cyan-300 font-bold' : ''}>
-              Medium (12h SLA)
+            <span className={severity === 'Medium' ? 'text-cyan-300 font-bold' : ''}>
+              Medium
             </span>
-            <span className={severity === 'high' ? 'text-amber-300 font-bold' : ''}>
-              High (6h SLA)
+            <span className={severity === 'High' ? 'text-amber-300 font-bold' : ''}>
+              High
             </span>
-            <span className={severity === 'critical' ? 'text-rose-400 font-bold' : ''}>
-              Critical (4h SLA)
+            <span className={severity === 'Critical' ? 'text-rose-400 font-bold' : ''}>
+              Critical
             </span>
           </div>
         </div>
@@ -115,7 +115,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-xs font-mono">
           <label className="uppercase text-zinc-400">
-            Operational Description <span className="text-rose-400">*</span>
+            Description <span className="text-rose-400">*</span>
           </label>
           <span
             className={`text-[11px] ${
@@ -131,7 +131,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
           maxLength={500}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe the civic issue with details on road blockage, hazards, water accumulation, or affected residents..."
+          placeholder="Describe the civic issue..."
           className="w-full px-4 py-2.5 rounded-xl bg-zinc-950/80 border border-white/10 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 transition-all leading-relaxed"
         />
       </div>
@@ -152,7 +152,7 @@ export const IssueDetailsStep: React.FC<IssueDetailsStepProps> = ({
           className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-600 hover:from-emerald-400 hover:to-blue-500 text-black font-bold text-xs sm:text-sm shadow-[0_0_25px_rgba(16,185,129,0.35)] transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-4 h-4" />
-          <span>{isSubmitting ? 'Transmitting Dispatch...' : 'Submit Issue Report'}</span>
+          <span>{isSubmitting ? 'Transmitting Dispatch...' : 'Submit Report'}</span>
         </button>
       </div>
     </div>

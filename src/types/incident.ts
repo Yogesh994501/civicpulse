@@ -1,17 +1,34 @@
-export type Category = 'road_repairs' | 'waste_management' | 'streetlighting' | 'park_maintenance';
-export type Severity = 'critical' | 'high' | 'medium' | 'low';
-export type IncidentStatus = 'pending' | 'in_progress' | 'resolved';
+export type Category = "Road Repairs" | "Waste Management" | "Streetlighting" | "Park Maintenance";
+export type Severity = "Critical" | "High" | "Medium" | "Low";
+export type IncidentStatus = "Pending" | "In Progress" | "Resolved";
 
-export interface TimelineEvent {
+export interface CrewGpsBadge {
+  unitId: string;
+  crewName: string;
+  leadName: string;
+  coordinates: string;
+  status: string;
+  speedKmh?: number;
+}
+
+export interface PhotoVerification {
+  beforeUrl?: string;
+  afterUrl?: string;
+  verifiedNote?: string;
+  verifiedBy?: string;
+}
+
+export interface TimelineStep {
   id: string;
   stepNumber: number;
   stage: string;
   timestamp: string;
   relativeTime: string;
-  status: 'completed' | 'in_progress' | 'pending';
-  responsibleTeam: string;
+  status: "Completed" | "In Progress" | "Pending";
+  assignedTeam: string;
   description: string;
-  verifiedBy?: string;
+  crewGpsBadge?: CrewGpsBadge;
+  photoVerification?: PhotoVerification;
 }
 
 export interface Incident {
@@ -23,11 +40,12 @@ export interface Incident {
   neighborhood: string;
   streetName: string;
   coordinates: string;
-  mapPosition: { x: number; y: number }; // percentages (0-100)
-  reportedAt: string;
-  slaTotalSeconds: number;
-  slaRemainingSeconds: number;
-  assignedCrew: {
+  mapPosition: { x: number; y: number }; // Percentage on map (0-100)
+  reportedAt: Date;
+  slaTotal: number; // in seconds
+  slaRemaining: number; // in seconds
+  assignedCrew: string;
+  assignedCrewDetails: {
     unitId: string;
     crewName: string;
     membersCount: number;
@@ -38,16 +56,16 @@ export interface Incident {
   hasUserUpvoted?: boolean;
   description: string;
   photoUrl?: string;
-  timeline: TimelineEvent[];
+  timeline: TimelineStep[];
 }
 
 export interface KPIStats {
-  resolutionRate: number; // e.g. 84
-  resolutionDelta: number; // e.g. +6.2
-  avgSlaHours: number; // e.g. 3.8
+  resolutionRate: number;
+  resolutionDelta: number;
+  avgSlaHours: number;
   isSlaImproving: boolean;
-  activeCrewsCount: number; // e.g. 14
-  criticalIncidentsCount: number; // e.g. 3
+  activeCrewsCount: number;
+  criticalIncidentsCount: number;
 }
 
 export interface TelemetryLog {
