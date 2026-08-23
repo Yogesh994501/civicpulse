@@ -2,25 +2,30 @@
 
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Incident, TimelineStep } from '@/types/incident';
+import { Incident } from '@/types/incident';
 import { 
   getCategoryMeta, 
   getSeverityMeta, 
   getStatusMeta, 
-  formatSecondsToCountdown 
+  formatSecondsToCountdown, 
+  getRelativeTimeString 
 } from '@/utils/categoryHelpers';
 import { 
   X, 
   CheckCircle2, 
   Clock, 
-  CircleDot, 
   ShieldCheck, 
   MapPin, 
   Users2, 
   Radio, 
   Navigation, 
   Image as ImageIcon, 
-  Sparkles 
+  Sparkles, 
+  Truck, 
+  Wrench, 
+  CheckCheck, 
+  Activity, 
+  FileCheck2 
 } from 'lucide-react';
 import { SLAProgress } from '../stream/SLAProgress';
 
@@ -49,10 +54,25 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
   const statusMeta = getStatusMeta(incident.status);
   const CategoryIcon = catMeta.icon;
 
+  // Determine stage icons based on step
+  const getStageIcon = (stepNumber: number, status: string) => {
+    switch (stepNumber) {
+      case 1:
+        return CheckCircle2;
+      case 2:
+        return Sparkles;
+      case 3:
+        return Truck;
+      case 4:
+      default:
+        return status === 'Completed' ? CheckCheck : Wrench;
+    }
+  };
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto">
-        {/* Backdrop */}
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 md:p-6 overflow-hidden">
+        {/* Pitch Black Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -62,17 +82,17 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
           className="fixed inset-0 bg-black/85 backdrop-blur-xl"
         />
 
-        {/* Modal Window */}
+        {/* Modal / Mobile Drawer Window */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: 20 }}
+          initial={{ opacity: 0, y: 50, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 50, scale: 0.96 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl bg-zinc-900/90 backdrop-blur-xl border border-white/15 overflow-hidden shadow-2xl z-10"
+          className="relative w-full max-w-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-zinc-900/90 backdrop-blur-2xl border border-white/10 overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.9)] z-10"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="p-5 sm:p-6 border-b border-white/10 flex items-start justify-between gap-4 bg-zinc-950/80">
+          {/* Header Bar */}
+          <div className="p-4 sm:p-6 border-b border-white/10 flex items-start justify-between gap-4 bg-zinc-950/90 shrink-0">
             <div className="flex items-start gap-3">
               <div
                 className="p-2.5 rounded-2xl border flex items-center justify-center shrink-0 mt-0.5"
@@ -86,7 +106,19 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
               </div>
 
               <div>
+                {/* Header Subtitles */}
                 <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                    RESOLUTION TIMELINE
+                  </span>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" />
+                    LIVE INCIDENT TRACKING
+                  </span>
+                </div>
+
+                {/* Incident ID, Severity, Title */}
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-mono font-bold text-white tracking-wider">
                     {incident.id}
                   </span>
@@ -98,15 +130,15 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
                   </span>
                 </div>
 
-                <h2 className="text-lg sm:text-xl font-bold text-white mt-1 leading-snug">
+                <h2 className="text-base sm:text-lg font-bold text-white mt-1 leading-snug">
                   {incident.title}
                 </h2>
 
                 <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
                   <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                   <span className="truncate">{incident.streetName}, {incident.neighborhood}</span>
-                  <span className="text-zinc-600">|</span>
-                  <span className="font-mono text-[11px] text-zinc-500">{incident.coordinates}</span>
+                  <span className="text-zinc-600 hidden sm:inline">|</span>
+                  <span className="font-mono text-[11px] text-zinc-500 hidden sm:inline">{incident.coordinates}</span>
                 </div>
               </div>
             </div>
@@ -121,11 +153,11 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
           </div>
 
           {/* SLA & Dispatch Summary Bar */}
-          <div className="px-5 sm:px-6 py-3 bg-black/60 border-b border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+          <div className="px-4 sm:px-6 py-3 bg-black/70 border-b border-white/5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono shrink-0">
             <div className="flex items-center gap-2">
               <Users2 className="w-4 h-4 text-amber-400 shrink-0" />
               <div className="truncate">
-                <span className="text-zinc-500 uppercase text-[10px] block">ASSIGNED FIELD TASKFORCE</span>
+                <span className="text-zinc-500 uppercase text-[10px] block">ASSIGNED FIELD CREW</span>
                 <span className="text-zinc-200 font-semibold truncate">
                   {incident.assignedCrew}
                 </span>
@@ -142,12 +174,12 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
             </div>
           </div>
 
-          {/* Timeline Content List with Framer Motion Stagger */}
-          <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
+          {/* 4-Stage Vertical Timeline */}
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono uppercase tracking-wider text-zinc-400 flex items-center gap-2">
-                <Radio className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                MUNICIPAL AUDIT TRAIL · 4-STAGE PROGRESSION
+                <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                STAGE-BY-STAGE MUNICIPAL EXECUTION
               </h3>
               <span className="text-[11px] font-mono text-zinc-500">
                 {incident.timeline.filter((e) => e.status === 'Completed').length} / 4 Stages Completed
@@ -155,17 +187,24 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
             </div>
 
             <div className="relative pl-6 sm:pl-8 space-y-6">
-              {/* Connecting vertical line */}
-              <div className="absolute left-[11px] sm:left-[15px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-cyan-500 via-emerald-500/50 to-zinc-800" />
+              {/* Dynamic Vertical Category Connector Line */}
+              <div
+                className="absolute left-[11px] sm:left-[15px] top-3 bottom-3 w-0.5 rounded-full"
+                style={{
+                  background: `linear-gradient(to bottom, ${catMeta.color}, ${catMeta.color}88, rgba(255,255,255,0.08))`,
+                }}
+              />
 
               {incident.timeline.map((event, index) => {
                 const isDone = event.status === 'Completed';
                 const isCurrent = event.status === 'In Progress';
+                const isPending = event.status === 'Pending';
+                const StageIcon = getStageIcon(event.stepNumber, event.status);
 
                 return (
                   <motion.div
                     key={event.id}
-                    initial={{ opacity: 0, x: -20 }}
+                    initial={{ opacity: 0, x: -18 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.35, delay: index * 0.08 }}
                     className="relative flex items-start gap-4 group"
@@ -174,11 +213,15 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
                     <div
                       className={`absolute -left-[23px] sm:-left-[27px] mt-0.5 flex items-center justify-center rounded-full transition-all duration-300 ${
                         isDone
-                          ? 'w-6 h-6 bg-emerald-500 text-black shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                          ? 'w-6 h-6 text-black font-bold shadow-md'
                           : isCurrent
-                          ? 'w-6 h-6 bg-cyan-400 text-black ring-4 ring-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.6)] animate-pulse'
+                          ? 'w-6 h-6 text-black ring-4 ring-cyan-500/30 animate-pulse'
                           : 'w-5 h-5 bg-zinc-900 border border-white/20 text-zinc-600'
                       }`}
+                      style={{
+                        backgroundColor: isDone ? catMeta.color : isCurrent ? '#06B6D4' : undefined,
+                        boxShadow: isDone ? `0 0 14px ${catMeta.color}88` : undefined,
+                      }}
                     >
                       {isDone ? (
                         <CheckCircle2 className="w-3.5 h-3.5 stroke-[3]" />
@@ -189,117 +232,191 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
                       )}
                     </div>
 
-                    {/* Timeline Stage Box */}
+                    {/* Timeline Stage Card */}
                     <div
-                      className={`flex-1 rounded-2xl p-4 border transition-all ${
+                      className={`flex-1 rounded-2xl p-4 sm:p-5 border transition-all ${
                         isCurrent
-                          ? 'bg-cyan-950/20 border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.1)]'
+                          ? 'bg-zinc-950/80 border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.12)]'
                           : isDone
-                          ? 'bg-zinc-900/70 border-white/10'
-                          : 'bg-zinc-950/40 border-white/5 opacity-60'
+                          ? 'bg-zinc-950/70 border-white/10'
+                          : 'bg-zinc-950/40 border-white/5 opacity-55'
                       }`}
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-white/5 font-mono text-xs">
+                      {/* Top Row: Stage Name & Timestamp */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/5 font-mono text-xs">
                         <div className="flex items-center gap-2">
+                          <StageIcon
+                            className="w-4 h-4"
+                            style={{ color: isDone ? catMeta.color : isCurrent ? '#06B6D4' : '#71717A' }}
+                          />
                           <span className="font-bold text-white text-sm">
-                            {event.stepNumber}. {event.stage}
+                            0{event.stepNumber} — {event.stage}
                           </span>
-                          {isCurrent && (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 animate-pulse">
-                              ACTIVE STAGE
-                            </span>
-                          )}
                         </div>
 
-                        <div className="flex items-center gap-2 text-zinc-400 text-[11px]">
-                          <span>{event.timestamp}</span>
-                          <span className="text-zinc-600">·</span>
-                          <span className="text-zinc-500">{event.relativeTime}</span>
+                        <div className="flex items-center gap-2 text-xs">
+                          {/* Stage 02 Custom: AI VERIFIED Badge */}
+                          {event.stepNumber === 2 && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 font-bold">
+                              <Sparkles className="w-3 h-3" />
+                              AI VERIFIED
+                            </span>
+                          )}
+
+                          {/* Status Pill */}
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold border ${
+                              isDone
+                                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                : isCurrent
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 animate-pulse'
+                                : 'bg-zinc-800 text-zinc-400 border-white/5'
+                            }`}
+                          >
+                            {event.status}
+                          </span>
+
+                          <span className="text-zinc-500 text-[11px]">{event.timestamp}</span>
                         </div>
                       </div>
 
-                      <p className="mt-2 text-xs text-zinc-300 leading-relaxed">
+                      {/* Stage Specific Content */}
+                      <p className="mt-2 text-xs sm:text-sm text-zinc-300 leading-relaxed">
                         {event.description}
                       </p>
 
-                      {/* Stage 3 Custom: Live GPS-Style Maintenance Crew Badge */}
+                      {/* Stage 01 Extra: Incident ID & Neighborhood Callout */}
+                      {event.stepNumber === 1 && (
+                        <div className="mt-2.5 flex items-center gap-3 text-[11px] font-mono text-zinc-400 bg-black/40 p-2 rounded-xl border border-white/5">
+                          <span>ID: <strong className="text-white">{incident.id}</strong></span>
+                          <span className="text-zinc-600">·</span>
+                          <span>AREA: <strong className="text-white">{incident.neighborhood}</strong></span>
+                          <span className="text-zinc-600">·</span>
+                          <span className="text-emerald-400 font-semibold">✓ Citizen Verified</span>
+                        </div>
+                      )}
+
+                      {/* Stage 02 Extra: Category & Severity Classification */}
+                      {event.stepNumber === 2 && (
+                        <div className="mt-2.5 flex items-center gap-3 text-[11px] font-mono text-zinc-400 bg-black/40 p-2 rounded-xl border border-white/5">
+                          <span>DETECTED: <strong className="text-white">{incident.category}</strong></span>
+                          <span className="text-zinc-600">·</span>
+                          <span>SEVERITY: <strong className="text-rose-400">{incident.severity}</strong></span>
+                          <span className="text-zinc-600">·</span>
+                          <span className="text-cyan-300">Confidence 98.6%</span>
+                        </div>
+                      )}
+
+                      {/* Stage 03 Extra: Live Animated GPS-Style Crew Badge */}
                       {event.crewGpsBadge && (
-                        <div className="mt-3 p-3 rounded-xl bg-black/60 border border-cyan-500/30 font-mono text-xs space-y-1.5 shadow-inner">
+                        <div className="mt-3 p-3 rounded-xl bg-black/70 border border-cyan-500/30 font-mono text-xs space-y-2 shadow-inner">
                           <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1.5 text-cyan-400 font-bold text-[11px]">
-                              <Navigation className="w-3.5 h-3.5 animate-spin-slow" />
-                              LIVE CREW GPS TELEMETRY
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 text-[10px] border border-cyan-500/20">
-                              {event.crewGpsBadge.status}
+                            <div className="flex items-center gap-2">
+                              <span className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
+                              </span>
+                              <span className="text-cyan-300 font-bold text-xs">
+                                {event.crewGpsBadge.status}
+                              </span>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 uppercase font-bold">
+                              LIVE GPS BEACON
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-400 pt-1">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-zinc-400 pt-1 border-t border-white/5">
                             <div>
-                              <span className="text-zinc-500 text-[10px] block">CREW & UNIT</span>
-                              <span className="text-zinc-200 font-medium">{event.crewGpsBadge.crewName} ({event.crewGpsBadge.unitId})</span>
+                              <span className="text-zinc-500 text-[10px] block">CREW NAME</span>
+                              <span className="text-zinc-200 font-medium">{event.crewGpsBadge.crewName}</span>
                             </div>
                             <div>
                               <span className="text-zinc-500 text-[10px] block">LEAD OFFICER</span>
                               <span className="text-zinc-200 font-medium">{event.crewGpsBadge.leadName}</span>
                             </div>
-                            <div className="col-span-2 flex items-center justify-between text-[10px] text-zinc-500 border-t border-white/5 pt-1">
+                            <div className="col-span-1 sm:col-span-2 flex items-center justify-between text-[10px] text-zinc-500 pt-1">
                               <span>COORDS: {event.crewGpsBadge.coordinates}</span>
                               {event.crewGpsBadge.speedKmh !== undefined && (
-                                <span className="text-emerald-400 font-semibold">SPEED: {event.crewGpsBadge.speedKmh} km/h</span>
+                                <span className="text-emerald-400 font-semibold">TELEMETRY SPEED: {event.crewGpsBadge.speedKmh} km/h</span>
                               )}
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {/* Stage 4 Custom: Before & After Photo Verification Cards */}
-                      {event.photoVerification && (
+                      {/* Stage 04 Extra: Before / After Photo Verification Area */}
+                      {event.stepNumber === 4 && (
                         <div className="mt-3.5 space-y-2">
-                          <span className="text-[11px] font-mono uppercase text-zinc-400 flex items-center gap-1.5">
-                            <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
-                            FIELD VERIFICATION TELEMETRY SNAPSHOTS
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-mono uppercase text-zinc-400 flex items-center gap-1.5 font-bold">
+                              <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                              FIELD PHOTO EVIDENCE (BEFORE & AFTER)
+                            </span>
+
+                            {(isDone || isCurrent) && (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono font-bold flex items-center gap-1">
+                                <FileCheck2 className="w-3 h-3" />
+                                ✓ FIELD VERIFIED
+                              </span>
+                            )}
+                          </div>
 
                           <div className="grid grid-cols-2 gap-2.5">
                             {/* Before Snapshot */}
-                            <div className="relative rounded-xl border border-white/10 overflow-hidden bg-black group">
-                              <img
-                                src={event.photoVerification.beforeUrl || incident.photoUrl}
-                                alt="Before remediation"
-                                className="w-full h-24 object-cover opacity-85 group-hover:opacity-100 transition-opacity"
-                              />
-                              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-black/80 border border-rose-500/40 text-[9px] font-mono font-bold text-rose-300">
+                            <div className="relative rounded-xl border border-white/10 overflow-hidden bg-black group h-28 sm:h-32">
+                              {event.photoVerification?.beforeUrl || incident.photoUrl ? (
+                                <img
+                                  src={event.photoVerification?.beforeUrl || incident.photoUrl}
+                                  alt="Before remediation"
+                                  className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 font-mono text-[10px]">
+                                  <ImageIcon className="w-5 h-5 mb-1 text-zinc-700" />
+                                  <span>NO PHOTO LOGGED</span>
+                                </div>
+                              )}
+                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/85 border border-rose-500/40 text-[9px] font-mono font-bold text-rose-300 shadow">
                                 BEFORE
                               </div>
                             </div>
 
                             {/* After Snapshot */}
-                            <div className="relative rounded-xl border border-white/10 overflow-hidden bg-black group">
-                              <img
-                                src={event.photoVerification.afterUrl || incident.photoUrl}
-                                alt="After remediation"
-                                className="w-full h-24 object-cover opacity-85 group-hover:opacity-100 transition-opacity"
-                              />
-                              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-black/80 border border-emerald-500/40 text-[9px] font-mono font-bold text-emerald-300">
-                                AFTER RESTORATION
+                            <div className="relative rounded-xl border border-white/10 overflow-hidden bg-black group h-28 sm:h-32">
+                              {event.photoVerification?.afterUrl ? (
+                                <img
+                                  src={event.photoVerification.afterUrl}
+                                  alt="After restoration"
+                                  className="w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 font-mono text-[10px] bg-zinc-950 p-2 text-center">
+                                  <Clock className="w-5 h-5 mb-1 text-cyan-400 animate-pulse" />
+                                  <span>RESTORATION PHOTO IN PROGRESS</span>
+                                </div>
+                              )}
+                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/85 border border-emerald-500/40 text-[9px] font-mono font-bold text-emerald-300 shadow">
+                                AFTER
                               </div>
                             </div>
                           </div>
 
-                          {event.photoVerification.verifiedNote && (
-                            <p className="text-[11px] text-zinc-400 font-mono italic">
+                          {event.photoVerification?.verifiedNote && (
+                            <p className="text-[11px] text-zinc-400 font-mono italic pt-1">
                               Note: {event.photoVerification.verifiedNote}
                             </p>
                           )}
                         </div>
                       )}
 
-                      <div className="mt-2.5 flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-2 border-t border-white/5">
+                      {/* Footer Org Badge */}
+                      <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-2 border-t border-white/5">
                         <span className="flex items-center gap-1.5 text-zinc-400">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                           Org: {event.assignedTeam}
+                        </span>
+                        <span className="text-zinc-500">
+                          {event.relativeTime}
                         </span>
                       </div>
                     </div>
@@ -310,9 +427,9 @@ export const ResolutionTimeline: React.FC<ResolutionTimelineProps> = ({
           </div>
 
           {/* Footer Close Button */}
-          <div className="p-4 sm:p-5 bg-zinc-950 border-t border-white/10 flex items-center justify-between">
-            <span className="text-xs font-mono text-zinc-500">
-              IMMUTABLE AUDIT LOG ID: {incident.id}-REC
+          <div className="p-4 sm:p-5 bg-zinc-950 border-t border-white/10 flex items-center justify-between shrink-0">
+            <span className="text-xs font-mono text-zinc-500 truncate">
+              AUDIT TRAIL: {incident.id}-IMMUTABLE
             </span>
             <button
               onClick={onClose}
