@@ -1,20 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useCivicPulse } from '@/context/CivicPulseContext';
 import { IncidentBeacon } from './IncidentBeacon';
 import { BeaconTooltip } from './BeaconTooltip';
 import { 
-  Radar, 
-  Layers, 
-  Maximize2, 
   Compass, 
-  Radio, 
-  Crosshair, 
-  ShieldAlert 
+  Crosshair 
 } from 'lucide-react';
-import { Incident } from '@/types/incident';
 
 export const CivicMap: React.FC = () => {
   const {
@@ -23,31 +17,51 @@ export const CivicMap: React.FC = () => {
     setSelectedIncident,
     setTimelineModalIncident,
     radarScanning,
-    setRadarScanning,
   } = useCivicPulse();
 
   const [activeSector, setActiveSector] = useState<string>('all');
   const [videoError, setVideoError] = useState<boolean>(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Check prefers-reduced-motion
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, []);
 
   const handleMapBackgroundClick = () => {
     setSelectedIncident(null);
   };
 
   return (
-    <div className="relative w-full rounded-2xl border border-white/10 bg-zinc-950/90 overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-      {/* Optional Background Video Layer with Graceful Fallback */}
-      {!videoError && (
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+    <div className="relative w-full rounded-2xl border border-white/10 bg-black overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+      {/* 1. Base Pitch Black Background */}
+      <div className="absolute inset-0 bg-[#000000] pointer-events-none z-0" />
+
+      {/* 2. 3D City Video Atmospheric Background Layer */}
+      {!videoError && !prefersReducedMotion && (
+        <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
           <video
+            ref={videoRef}
             autoPlay
             muted
             loop
             playsInline
             onError={() => setVideoError(true)}
-            className="w-full h-full object-cover opacity-40 mix-blend-screen"
+            className="w-full h-full object-cover opacity-35 mix-blend-screen transition-opacity duration-700"
             style={{
-              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+              maskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 15%, rgba(0,0,0,0.55) 70%, #000000 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.15) 15%, rgba(0,0,0,0.55) 70%, #000000 100%)',
             }}
           >
             <source src="/assets/city-radar-loop.mp4" type="video/mp4" />
@@ -55,10 +69,21 @@ export const CivicMap: React.FC = () => {
         </div>
       )}
 
-      {/* Map Header Toolbar */}
+      {/* 3. Dark Gradient / Vignette Overlay Layer */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[2]"
+        style={{
+          background: `
+            linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.2) 30%, rgba(0, 0, 0, 0.65) 80%, #000000 100%),
+            radial-gradient(ellipse at 50% 45%, transparent 35%, rgba(0, 0, 0, 0.75) 100%)
+          `,
+        }}
+      />
+
+      {/* Map Header Controls Tier */}
       <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: District Title & Telemetry */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 pointer-events-auto">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/85 backdrop-blur-md border border-white/10 pointer-events-auto shadow-lg">
           <div className="flex items-center gap-1.5">
             <Crosshair className="w-4 h-4 text-cyan-400 animate-spin-slow" />
             <span className="text-xs font-mono font-bold tracking-wider text-white">
@@ -74,14 +99,14 @@ export const CivicMap: React.FC = () => {
         {/* Right: Map Utility Controls */}
         <div className="flex items-center gap-1.5 pointer-events-auto">
           {/* Sector Filter Chips */}
-          <div className="hidden md:flex items-center gap-1 bg-black/80 backdrop-blur-md p-1 rounded-xl border border-white/10 text-[11px] font-mono">
+          <div className="hidden md:flex items-center gap-1 bg-black/85 backdrop-blur-md p-1 rounded-xl border border-white/10 text-[11px] font-mono shadow-lg">
             {['all', 'Bandra', 'Khar', 'Santacruz', 'Kurla'].map((sec) => (
               <button
                 key={sec}
                 onClick={() => setActiveSector(sec)}
                 className={`px-2.5 py-1 rounded-lg transition-all ${
                   activeSector === sec
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
@@ -91,7 +116,7 @@ export const CivicMap: React.FC = () => {
           </div>
 
           {/* Compass Orientation Indicator */}
-          <div className="px-2.5 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-white/10 flex items-center gap-1.5 text-xs font-mono text-zinc-400">
+          <div className="px-2.5 py-1.5 rounded-xl bg-black/85 backdrop-blur-md border border-white/10 flex items-center gap-1.5 text-xs font-mono text-zinc-400 shadow-lg">
             <Compass className="w-3.5 h-3.5 text-cyan-400" />
             <span className="text-[10px]">N 358°</span>
           </div>
@@ -100,10 +125,10 @@ export const CivicMap: React.FC = () => {
 
       {/* Main Interactive Map Surface */}
       <div
-        className="relative w-full h-[460px] sm:h-[540px] md:h-[600px] bg-[#020204] tactical-grid cursor-crosshair overflow-hidden"
+        className="relative w-full h-[460px] sm:h-[540px] md:h-[600px] bg-[#000000]/60 tactical-grid cursor-crosshair overflow-hidden z-10"
         onClick={handleMapBackgroundClick}
       >
-        {/* SVG Tactical Vector Map Layer */}
+        {/* 4. SVG Tactical Vector Map Layer */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none opacity-85 z-10"
           xmlns="http://www.w3.org/2000/svg"
@@ -195,7 +220,7 @@ export const CivicMap: React.FC = () => {
         </svg>
 
         {/* Tactical Radar Sweep Beam */}
-        {radarScanning && (
+        {radarScanning && !prefersReducedMotion && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-15">
             <div className="w-[850px] h-[850px] rounded-full radar-sweep-beam opacity-70 pointer-events-none" />
           </div>
@@ -205,7 +230,7 @@ export const CivicMap: React.FC = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none z-10" />
 
         {/* Map Corner Telemetry Badges */}
-        <div className="absolute bottom-3 left-3 text-[10px] font-mono text-zinc-500 bg-black/70 px-2.5 py-1 rounded-lg border border-white/5 pointer-events-none flex items-center gap-3 z-30">
+        <div className="absolute bottom-3 left-3 text-[10px] font-mono text-zinc-500 bg-black/80 px-2.5 py-1 rounded-lg border border-white/5 pointer-events-none flex items-center gap-3 z-30">
           <span>LAT: 19.0596° N</span>
           <span>LNG: 72.8295° E</span>
           <span className="text-cyan-400 font-bold">GRID: H-W-MUM</span>
@@ -231,7 +256,7 @@ export const CivicMap: React.FC = () => {
           </div>
         </div>
 
-        {/* Incident Beacons Layer */}
+        {/* 5. Incident Beacons Layer */}
         <div className="relative z-20 w-full h-full pointer-events-none">
           {filteredIncidents.map((incident) => (
             <div key={incident.id} className="pointer-events-auto">
@@ -244,7 +269,7 @@ export const CivicMap: React.FC = () => {
           ))}
         </div>
 
-        {/* Selected Incident Floating Tooltip */}
+        {/* 6. Selected Incident Floating Tooltip */}
         <div className="relative z-30 pointer-events-auto">
           <BeaconTooltip
             incident={selectedIncident}
