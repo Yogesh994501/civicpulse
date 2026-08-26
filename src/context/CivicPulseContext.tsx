@@ -1,14 +1,25 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Incident, Category, Severity, IncidentStatus, KPIStats, TelemetryLog } from '@/types/incident';
+import { Incident, Category, Severity, IncidentStatus, KPIStats, TelemetryLog, IncidentContext } from '@/types/incident';
 import { INITIAL_INCIDENTS, INITIAL_KPIS } from '@/data/mockIncidents';
+import { getSupabaseBrowserClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { fetchIncidentsFromSupabase, createIncidentInSupabase, toggleUpvoteInSupabase } from '@/services/supabaseService';
 
 interface ToastData {
   id: string;
   title: string;
   description: string;
   type: 'success' | 'info' | 'warning' | 'alert';
+}
+
+interface CivicPulseUser {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    role?: 'citizen' | 'operator' | 'admin' | 'crew';
+  };
 }
 
 interface CivicPulseContextType {
@@ -20,13 +31,19 @@ interface CivicPulseContextType {
   setTimelineModalIncident: (incident: Incident | null) => void;
   isReportDrawerOpen: boolean;
   setIsReportDrawerOpen: (open: boolean) => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  user: CivicPulseUser | null;
+  setUser: (user: CivicPulseUser | null) => void;
+  signOut: () => Promise<void>;
+  isDemoMode: boolean;
   categoryFilter: 'All' | Category;
   setCategoryFilter: (category: 'All' | Category) => void;
   statusFilter: 'All' | IncidentStatus;
   setStatusFilter: (status: 'All' | IncidentStatus) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
-  upvoteIncident: (id: string) => void;
+  upvoteIncident: (id: string) => Promise<void>;
   addNewIncident: (data: {
     title: string;
     category: Category;
@@ -36,7 +53,8 @@ interface CivicPulseContextType {
     coordinates: string;
     description: string;
     photoUrl?: string;
-  }) => boolean;
+    context?: IncidentContext;
+  }) => Promise<boolean>;
   kpis: KPIStats;
   telemetryLogs: TelemetryLog[];
   toast: ToastData | null;
@@ -44,6 +62,7 @@ interface CivicPulseContextType {
   clearToast: () => void;
   radarScanning: boolean;
   setRadarScanning: (scanning: boolean | ((prev: boolean) => boolean)) => void;
+  refreshIncidents: () => Promise<void>;
 }
 
 const CivicPulseContext = createContext<CivicPulseContextType | undefined>(undefined);
@@ -53,6 +72,9 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [timelineModalIncident, setTimelineModalIncident] = useState<Incident | null>(null);
   const [isReportDrawerOpen, setIsReportDrawerOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [user, setUser] = useState<CivicPulseUser | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(!isSupabaseConfigured());
   const [categoryFilter, setCategoryFilter] = useState<'All' | Category>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | IncidentStatus>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +121,76 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setToast(null);
   }, []);
 
+  // Initial Auth Session Sync
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          setUser(session.user as any);
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser((session?.user as any) || null);
+      });
+
+      return () => subscription.unsubscribe();
+    } else {
+      // Local demo user check
+      const savedDemo = localStorage.getItem('civicpulse_demo_user');
+      if (savedDemo) {
+        try {
+          setUser(JSON.parse(savedDemo));
+        } catch (e) {}
+      }
+    }
+  }, []);
+
+  // Initial Database Load & Refresh Function
+  const refreshIncidents = useCallback(async () => {
+    const dbIncidents = await fetchIncidentsFromSupabase();
+    if (dbIncidents && dbIncidents.length > 0) {
+      setIncidents(dbIncidents);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshIncidents();
+  }, [refreshIncidents]);
+
+  // Supabase Realtime Subscription to Incidents and Votes
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('civicpulse_realtime_stream')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'incidents' },
+        (payload) => {
+          console.log('Realtime Incident Event received:', payload);
+          refreshIncidents();
+          if (payload.eventType === 'INSERT') {
+            showToast('Realtime Incident Ingested', `New incident ${(payload.new as any).incident_code} synchronized across command center.`, 'info');
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'incident_votes' },
+        () => {
+          refreshIncidents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refreshIncidents, showToast]);
+
   // 1-second interval ticking down SLA remaining times
   useEffect(() => {
     const timer = setInterval(() => {
@@ -115,7 +207,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => clearInterval(timer);
   }, []);
 
-  // Periodic telemetry updates (every 22 seconds)
+  // Periodic telemetry updates (every 24 seconds)
   useEffect(() => {
     const telemetryInterval = setInterval(() => {
       const messages = [
@@ -133,18 +225,26 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         category: randomMsg.cat,
       };
       setTelemetryLogs((prev) => [newLog, ...prev.slice(0, 5)]);
-    }, 22000);
+    }, 24000);
 
     return () => clearInterval(telemetryInterval);
   }, []);
 
-  // Upvoting handler: first click increments and activates, second click decrements
-  const upvoteIncident = useCallback((id: string) => {
+  // Persistent Upvoting handler (Linked to Supabase or Demo State)
+  const upvoteIncident = useCallback(async (id: string) => {
+    // If not authenticated, prompt auth modal
+    if (!user) {
+      showToast('Authentication Required', 'Please sign in or select Demo User to upvote civic incidents.', 'alert');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
+    // Optimistic UI Update
     setIncidents((prev) =>
       prev.map((inc) => {
         if (inc.id === id) {
           const isUpvoted = inc.hasUserUpvoted;
-          const newCount = isUpvoted ? inc.upvotes - 1 : inc.upvotes + 1;
+          const newCount = isUpvoted ? Math.max(0, inc.upvotes - 1) : inc.upvotes + 1;
           return {
             ...inc,
             upvotes: newCount,
@@ -155,23 +255,36 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       })
     );
 
-    // Keep selectedIncident in sync
     setSelectedIncident((prev) => {
       if (prev && prev.id === id) {
         const isUpvoted = prev.hasUserUpvoted;
         return {
           ...prev,
-          upvotes: isUpvoted ? prev.upvotes - 1 : prev.upvotes + 1,
+          upvotes: isUpvoted ? Math.max(0, prev.upvotes - 1) : prev.upvotes + 1,
           hasUserUpvoted: !isUpvoted,
         };
       }
       return prev;
     });
-  }, []);
+
+    // Sync to Supabase
+    await toggleUpvoteInSupabase(id, user.id);
+  }, [user, showToast]);
+
+  // Sign out handler
+  const signOut = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+    localStorage.removeItem('civicpulse_demo_user');
+    setUser(null);
+    showToast('Signed Out', 'You have been logged out of the operations portal.', 'info');
+  }, [showToast]);
 
   // Add new incident from 3-step report drawer
   const addNewIncident = useCallback(
-    (data: {
+    async (data: {
       title: string;
       category: Category;
       severity: Severity;
@@ -180,26 +293,31 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       coordinates: string;
       description: string;
       photoUrl?: string;
-    }): boolean => {
+      context?: IncidentContext;
+    }): Promise<boolean> => {
       if (!data.title.trim() || !data.description.trim() || !data.streetName.trim()) {
         showToast('Validation Error', 'Please complete all required fields.', 'alert');
         return false;
       }
 
-      const newIdNumber = Math.floor(1000 + Math.random() * 9000);
-      const newId = `CP-${newIdNumber}`;
+      // Persist to Supabase if configured
+      const createdCode = await createIncidentInSupabase({
+        ...data,
+        userId: user?.id,
+      });
+
+      const newId = createdCode || `CP-${Math.floor(1000 + Math.random() * 9000)}`;
       
       const defaultCrewMap: Record<Category, { unitId: string; crewName: string; membersCount: number; vehicleType: string }> = {
-        'Road Repairs': { unitId: `CR-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Rapid Asphalt Taskforce', membersCount: 5, vehicleType: 'Pavement Roller & Patch Rig' },
-        'Waste Management': { unitId: `SW-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Solid Waste Rapid Cleansing', membersCount: 4, vehicleType: 'Compactor Truck' },
-        'Streetlighting': { unitId: `LT-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Power & Luminaire Repair', membersCount: 3, vehicleType: 'Bucket Crane Van' },
-        'Park Maintenance': { unitId: `PK-0${Math.floor(1 + Math.random() * 8)}`, crewName: 'Parks & Infrastructure Crew', membersCount: 4, vehicleType: 'Municipal Utility Truck' },
+        'Road Repairs': { unitId: 'CR-04', crewName: 'Rapid Asphalt Taskforce Alpha', membersCount: 5, vehicleType: 'Pavement Roller & Patch Rig' },
+        'Waste Management': { unitId: 'SW-12', crewName: 'Solid Waste Rapid Cleansing', membersCount: 4, vehicleType: 'Compactor Truck' },
+        'Streetlighting': { unitId: 'LT-08', crewName: 'Power & Luminaire Repair', membersCount: 3, vehicleType: 'Bucket Crane Van' },
+        'Park Maintenance': { unitId: 'PK-03', crewName: 'Parks & Infrastructure Crew', membersCount: 4, vehicleType: 'Municipal Utility Truck' },
       };
 
       const crew = defaultCrewMap[data.category];
       const randomX = Math.floor(20 + Math.random() * 60);
       const randomY = Math.floor(20 + Math.random() * 60);
-
       const slaHours = data.severity === 'Critical' ? 4 : data.severity === 'High' ? 6 : data.severity === 'Medium' ? 12 : 24;
       const slaTotal = slaHours * 3600;
 
@@ -225,6 +343,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         hasUserUpvoted: true,
         description: data.description,
         photoUrl: data.photoUrl || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=800&q=80',
+        context: data.context,
         timeline: [
           {
             id: `t-${Date.now()}-1`,
@@ -249,7 +368,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           {
             id: `t-${Date.now()}-3`,
             stepNumber: 3,
-            stage: 'Crew Dispatched & Live Telemetry Locked',
+            stage: 'Crew Dispatched',
             timestamp: 'In Progress',
             relativeTime: 'Est. 10m',
             status: 'In Progress',
@@ -267,16 +386,12 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           {
             id: `t-${Date.now()}-4`,
             stepNumber: 4,
-            stage: 'Field Resolution & Before/After Photo Verification',
+            stage: 'Field Resolution & Verification',
             timestamp: 'Pending',
             relativeTime: `Est. ${slaHours}h`,
             status: 'Pending',
             assignedTeam: 'Municipal Field Operations',
             description: 'Physical inspection and remediation work pending field taskforce deployment.',
-            photoVerification: {
-              beforeUrl: data.photoUrl || 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&w=600&q=80',
-              verifiedNote: 'Site remediation target queued in dispatch queue.',
-            },
           },
         ],
       };
@@ -296,15 +411,15 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       showToast(
         `Incident ${newId} Dispatched!`,
-        `Assigned to ${crew.crewName} in ${data.neighborhood}. Beacon added to radar map.`,
+        `Assigned to ${crew.crewName} in ${data.neighborhood}. Persisted to database.`,
         'success'
       );
       return true;
     },
-    [showToast]
+    [showToast, user]
   );
 
-  // Dynamic KPI computation based on incidents
+  // Dynamic KPI computation based on active incident data
   const kpis: KPIStats = useMemo(() => {
     const total = incidents.length;
     const resolved = incidents.filter((i) => i.status === 'Resolved').length;
@@ -312,11 +427,11 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const calculatedRate = total > 0 ? Math.round((resolved / total) * 100) : 84;
     
     return {
-      resolutionRate: Math.max(78, calculatedRate + 25),
+      resolutionRate: Math.max(75, Math.min(96, calculatedRate + 25)),
       resolutionDelta: 6.2,
       avgSlaHours: 3.8,
       isSlaImproving: true,
-      activeCrewsCount: INITIAL_KPIS.activeCrewsCount + (total - INITIAL_INCIDENTS.length),
+      activeCrewsCount: INITIAL_KPIS.activeCrewsCount + Math.max(0, total - INITIAL_INCIDENTS.length),
       criticalIncidentsCount: critical,
     };
   }, [incidents]);
@@ -350,6 +465,12 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setTimelineModalIncident,
         isReportDrawerOpen,
         setIsReportDrawerOpen,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        user,
+        setUser,
+        signOut,
+        isDemoMode,
         categoryFilter,
         setCategoryFilter,
         statusFilter,
@@ -365,6 +486,7 @@ export const CivicPulseProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         clearToast,
         radarScanning,
         setRadarScanning,
+        refreshIncidents,
       }}
     >
       {children}

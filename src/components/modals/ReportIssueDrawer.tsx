@@ -50,12 +50,12 @@ export const ReportIssueDrawer: React.FC = () => {
     setTimeout(resetForm, 300);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim() || !description.trim()) return;
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const success = addNewIncident({
+    try {
+      const success = await addNewIncident({
         title,
         category,
         severity,
@@ -72,7 +72,9 @@ export const ReportIssueDrawer: React.FC = () => {
       } else {
         setIsSubmitting(false);
       }
-    }, 600);
+    } catch (e) {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isReportDrawerOpen) return null;
