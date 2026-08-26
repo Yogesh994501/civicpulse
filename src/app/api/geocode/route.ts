@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getRapidApiHeaders, hasValidRapidApiKey } from '@/services/rapidApiConfig';
 
 export interface GeocodeResult {
-  source: 'rapidapi' | 'fallback_geocoder';
+  source: 'rapidapi' | 'nominatim_open' | 'fallback_geocoder';
   streetName: string;
   neighborhood: string;
   district: string;
@@ -15,8 +15,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get('lat') || '19.0596';
   const lon = searchParams.get('lon') || '72.8295';
+  const latNum = parseFloat(lat);
+  const lonNum = parseFloat(lon);
 
-  // 1. If RapidAPI key is configured, call RapidAPI Geocoding
+  // 1. If RapidAPI key is explicitly configured with a free tier
   if (hasValidRapidApiKey()) {
     try {
       const geocodeUrl = `${process.env.RAPIDAPI_GEOCODE_URL || 'https://forward-reverse-geocoding.p.rapidapi.com/v1/reverse'}?lat=${lat}&lon=${lon}&format=json`;
@@ -34,20 +36,49 @@ export async function GET(request: Request) {
           district: 'H-West Ward',
           city: address.city || 'Mumbai',
           formattedAddress: data.display_name || `${address.road || 'Linking Road'}, Bandra West, Mumbai`,
-          coordinates: `${parseFloat(lat).toFixed(4)}° N, ${parseFloat(lon).toFixed(4)}° E`,
+          coordinates: `${latNum.toFixed(4)}° N, ${lonNum.toFixed(4)}° E`,
         };
 
         return NextResponse.json({ success: true, data: result });
       }
     } catch (err) {
-      console.warn('RapidAPI geocode fetch failed, using fallback:', err);
+      console.warn('RapidAPI geocode fetch failed, falling back to open geocoding:', err);
     }
   }
 
-  // 2. Intelligent Geo-Mapping Fallback for Sector Coordinates
-  const latNum = parseFloat(lat);
-  const lonNum = parseFloat(lon);
+  // 2. OpenStreetMap / BigDataCloud Open Geocoder: 100% Free, $0 Cost, No Credit Card
+  try {
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
+    const osmRes = await fetch(osmUrl, {
+      headers: {
+        'User-Agent': 'CivicPulse-Municipal-Command/3.0 (academic-demo)',
+      },
+      next: { revalidate: 3600 },
+    });
 
+    if (osmRes.ok) {
+      const osmData = await osmRes.json();
+      const addr = osmData.address || {};
+      const street = addr.road || addr.pedestrian || addr.suburb || 'Linking Road';
+      const neighborhood = addr.neighbourhood || addr.suburb || addr.city_district || 'Bandra West';
+
+      const openResult: GeocodeResult = {
+        source: 'nominatim_open',
+        streetName: street,
+        neighborhood: neighborhood,
+        district: 'Sector H-West Ward',
+        city: addr.city || 'Mumbai',
+        formattedAddress: `${street}, ${neighborhood}, Mumbai`,
+        coordinates: `${latNum.toFixed(4)}° N, ${lonNum.toFixed(4)}° E`,
+      };
+
+      return NextResponse.json({ success: true, data: openResult });
+    }
+  } catch (osmErr) {
+    console.warn('OpenStreetMap reverse geocode fallback failed:', osmErr);
+  }
+
+  // 3. Intelligent Geo-Mapping Fallback for Sector Coordinates ($0 Cost)
   let neighborhood = 'Bandra West';
   let streetName = 'Linking Road, Junction near National College';
 
