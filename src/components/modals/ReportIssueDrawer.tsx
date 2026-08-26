@@ -193,6 +193,10 @@ export const ReportIssueDrawer: React.FC = () => {
                 setCoordinates={setCoordinates}
                 photoUrl={photoUrl}
                 setPhotoUrl={setPhotoUrl}
+                category={category}
+                setCategory={setCategory}
+                setTitle={setTitle}
+                setSeverity={setSeverity}
                 onBack={() => setStep(1)}
                 onNext={() => setStep(3)}
               />

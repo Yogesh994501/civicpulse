@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCivicPulse } from '@/context/CivicPulseContext';
 import { TelemetryBar } from './TelemetryBar';
+import { ApiStatusTelemetry } from './ApiStatusTelemetry';
 
 export const CivicPulseHeader: React.FC = () => {
   const { setIsReportDrawerOpen, radarScanning, setRadarScanning } = useCivicPulse();
@@ -63,7 +64,7 @@ export const CivicPulseHeader: React.FC = () => {
                 </span>
               </div>
 
-              {/* Status Indicator */}
+              {/* Status Indicator & Live Clock */}
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25">
                   <span className="relative flex h-2 w-2">
@@ -80,6 +81,9 @@ export const CivicPulseHeader: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* API Status Telemetry Center */}
+          <ApiStatusTelemetry />
 
           {/* Header Controls & New Incident Trigger */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -103,7 +107,7 @@ export const CivicPulseHeader: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setIsReportDrawerOpen(true)}
-              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs sm:text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all"
+              className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-semibold text-xs sm:text-sm shadow-[0_0_25px_rgba(6,182,212,0.35)] transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
               <span>Report Issue</span>
@@ -111,7 +115,7 @@ export const CivicPulseHeader: React.FC = () => {
           </div>
         </div>
 
-        {/* Lower Tier: Live Telemetry KPIs */}
+        {/* Lower Tier: Live Telemetry KPIs & Weather Widget */}
         <div className="pt-2.5">
           <TelemetryBar />
         </div>

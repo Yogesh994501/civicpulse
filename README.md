@@ -1,42 +1,89 @@
 # CivicPulse — Real-Time Municipal Operations & Issue Command Center
 
-CivicPulse is a high-performance, real-time civic issue tracking and automated dispatch command center designed for modern municipalities and smart cities.
+CivicPulse is a production-quality, real-time civic issue tracking dashboard and municipal operations command center built with **Next.js 14+ (App Router), React, TypeScript, Tailwind CSS, Lucide React, and Framer Motion**.
 
-![CivicPulse Overview](https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=1200&q=80)
+---
 
-## Key Features
+## 🌟 Key Features
 
-- 🛰️ **Tactical 3D Vector Radar Command Center**: Simulated district map with real-time continuous radar sweep, topological grid, sector zones, and severity-driven animated beacons.
-- ⚡ **Telemetry Header & Live KPIs**: Real-time resolution rates, average SLA countdowns, active field crew telemetry, and pending critical incident counters.
-- 🎯 **Interactive Beacon Tooltips**: Glassmorphic floating panels with live countdown timers, crew dispatch metadata, coordinates, and fast timeline actions.
-- 📊 **Multi-Faceted Control Toolbar**: Instant search across Incident IDs, streets, neighborhoods, and titles alongside category & status filters.
-- 🗂️ **Live Issue Stream Bento Grid**: Responsive layout with SLA progress bars matching category accents, interactive session upvotes, and field crew badges.
-- ⏱️ **7-Stage Resolution Audit Trail**: Glassmorphic modal displaying the end-to-end municipal journey from ingestion, AI triage, dispatch, on-site investigation, repair, to citizen confirmation.
-- 📝 **3-Step Report Ingestion Flow**: Integrated category selector, GPS auto-detect lock, drag-and-drop photo dropzone, urgency slider, and live broadcast toast.
+* **Hero Tactical Radar Command Center**: 3D digital-twin city geometry, glowing arterial expressways, concentric distance rings, and 360° rotating radar sweep.
+* **Data-Driven Live Resolution Timeline**: 4-stage audit trail with AI verification badges, live maintenance crew GPS telemetry, and Before/After photo evidence.
+* **Real-Time Environmental Telemetry**: Ambient weather, AQI, precipitation, and wind monitoring powered by RapidAPI.
+* **Automated Geocoding & AI Vision Triage**: Satellite GPS reverse geocoding to exact Mumbai street landmarks and optional AI vision classification.
+* **Interactive Incident Bento Stream**: 1-second countdown SLA timers, session upvoting, category tabs, and instant multi-field search.
+* **3-Step Incident Ingestion Flow**: Guided citizen reporting with auto-coordinates, dropzone evidence upload, and reactive dispatch.
 
-## Tech Stack
+---
 
-- **Framework**: Next.js 14+ (App Router)
-- **Language**: TypeScript + React 18
-- **Styling**: Tailwind CSS + Custom Tactical Neon & Glassmorphism Design System
-- **Icons**: Lucide React
-- **Animations**: Framer Motion
+## 🌐 RapidAPI Setup & Configuration
 
-## Getting Started
+CivicPulse integrates with **RapidAPI** micro-services via secure, server-side Next.js route handlers. The application includes resilient fallback telemetry ensuring zero downtime even when external API limits are reached.
 
-### 1. Install Dependencies
+### 1. Obtain Your Free RapidAPI Key
+1. Sign up for a free account at **[rapidapi.com](https://rapidapi.com/)**.
+2. Subscribe to the following APIs (free tiers available):
+   * **Weather API**: `weatherapi-com.p.rapidapi.com` or OpenWeatherMap on RapidAPI.
+   * **Forward / Reverse Geocoding API**: `forward-reverse-geocoding.p.rapidapi.com` or Geoapify.
+   * **Image Moderation / Vision API**: `image-analysis-moderation.p.rapidapi.com`.
+
+---
+
+### 2. Configure Environment Variables
+Create a `.env.local` file in your project root (copy from `.env.example`):
+
 ```bash
+cp .env.example .env.local
+```
+
+Add your RapidAPI credentials to `.env.local`:
+
+```env
+# Global RapidAPI Key
+RAPIDAPI_KEY=your_rapidapi_key_here
+
+# 1. Weather & Environmental Radar API
+RAPIDAPI_WEATHER_HOST=weatherapi-com.p.rapidapi.com
+RAPIDAPI_WEATHER_URL=https://weatherapi-com.p.rapidapi.com/current.json
+
+# 2. Reverse Geocoding & Address API
+RAPIDAPI_GEOCODE_HOST=forward-reverse-geocoding.p.rapidapi.com
+RAPIDAPI_GEOCODE_URL=https://forward-reverse-geocoding.p.rapidapi.com/v1/reverse
+
+# 3. AI Civic Vision & Auto-Triage API
+RAPIDAPI_AI_TRIAGE_HOST=image-analysis-moderation.p.rapidapi.com
+RAPIDAPI_AI_TRIAGE_URL=https://image-analysis-moderation.p.rapidapi.com/classify
+```
+
+---
+
+### 3. Server-Side Route Architecture
+
+| Route Handler | Method | Purpose | UI Consumer |
+| :--- | :--- | :--- | :--- |
+| `/api/weather` | `GET` | Fetches live municipal weather & AQI telemetry | `EnvironmentalTelemetry.tsx` |
+| `/api/geocode` | `GET` | Reverse geocodes coordinates to street & ward | `LocationStep.tsx` (Report Drawer) |
+| `/api/analyze-image` | `POST` | Suggests issue category & severity from photos | `LocationStep.tsx` (AI Vision Core) |
+| `/api/system-status` | `GET` | Health check for all API micro-services | `ApiStatusTelemetry.tsx` |
+
+---
+
+## 🚀 Running Locally
+
+```bash
+# 1. Install dependencies
 npm install
-```
 
-### 2. Run Development Server
-```bash
+# 2. Start development server
 npm run dev
+
+# 3. Open in browser
+http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+---
 
-### 3. Build for Production
+## 📦 Production Build
+
 ```bash
 npm run build
 npm run start

@@ -31,6 +31,28 @@ export interface TimelineStep {
   photoVerification?: PhotoVerification;
 }
 
+export interface IncidentContext {
+  weather?: {
+    temperature: number;
+    condition: string;
+    humidity?: number;
+    windSpeedKmh?: number;
+    airQualityIndex?: number;
+  };
+  location?: {
+    street?: string;
+    neighborhood?: string;
+    city?: string;
+    postalCode?: string;
+    region?: string;
+  };
+  aiVision?: {
+    suggestedCategory?: Category;
+    confidenceScore?: number;
+    analysisSource?: string;
+  };
+}
+
 export interface Incident {
   id: string;
   title: string;
@@ -57,6 +79,7 @@ export interface Incident {
   description: string;
   photoUrl?: string;
   timeline: TimelineStep[];
+  context?: IncidentContext;
 }
 
 export interface KPIStats {
@@ -75,4 +98,12 @@ export interface TelemetryLog {
   message: string;
   incidentId?: string;
   category?: Category;
+}
+
+export interface ApiStatusSummary {
+  locationStatus: 'online' | 'degraded' | 'offline';
+  weatherStatus: 'online' | 'degraded' | 'offline';
+  imageAnalysisStatus: 'online' | 'degraded' | 'offline';
+  hasRapidApiKey: boolean;
+  lastChecked: string;
 }
