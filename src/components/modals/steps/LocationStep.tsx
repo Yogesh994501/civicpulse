@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { MapPin, Navigation, UploadCloud, X, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { MapPin, Navigation, UploadCloud, X, Image as ImageIcon, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface LocationStepProps {
@@ -30,6 +30,8 @@ export const LocationStep: React.FC<LocationStepProps> = ({
   onNext,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeSource, setGeocodeSource] = useState<string>('Auto-Locked');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const samplePhotos = [
@@ -38,6 +40,30 @@ export const LocationStep: React.FC<LocationStepProps> = ({
     { label: 'Streetlight Dark', url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=600&q=80' },
     { label: 'Park Damage', url: 'https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=600&q=80' },
   ];
+
+  const handleAutoGeolocate = async () => {
+    setIsGeocoding(true);
+    try {
+      // Simulate/request coordinates and call RapidAPI reverse geocoding
+      const lat = (19.055 + Math.random() * 0.025).toFixed(4);
+      const lon = (72.825 + Math.random() * 0.020).toFixed(4);
+
+      const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setCoordinates(`${lat}° N, ${lon}° E`);
+          setNeighborhood(json.data.neighborhood);
+          setStreetName(json.data.streetName);
+          setGeocodeSource(json.data.source === 'rapidapi' ? 'RapidAPI Geocode Lock' : 'Satellite Radar Lock');
+        }
+      }
+    } catch (e) {
+      console.warn('Geocoding error:', e);
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,7 +101,7 @@ export const LocationStep: React.FC<LocationStepProps> = ({
       </div>
 
       {/* GPS Telemetry Box */}
-      <div className="rounded-2xl bg-zinc-950/80 border border-white/10 p-4 space-y-4">
+      <div className="rounded-2xl bg-zinc-950/80 border border-white/10 p-4 space-y-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Navigation className="w-4 h-4 text-cyan-400 animate-spin-slow" />
@@ -84,10 +110,19 @@ export const LocationStep: React.FC<LocationStepProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-400">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>Location detected (±1.4m)</span>
-          </div>
+          <button
+            type="button"
+            onClick={handleAutoGeolocate}
+            disabled={isGeocoding}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 transition-all cursor-pointer"
+          >
+            {isGeocoding ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Sparkles className="w-3 h-3 text-cyan-400" />
+            )}
+            <span>{isGeocoding ? 'Resolving Address...' : geocodeSource}</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">

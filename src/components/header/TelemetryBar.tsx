@@ -3,6 +3,7 @@
 import React from 'react';
 import { useCivicPulse } from '@/context/CivicPulseContext';
 import { KPIStat } from './KPIStat';
+import { EnvironmentalTelemetry } from './EnvironmentalTelemetry';
 import { 
   TrendingUp, 
   Clock, 
@@ -15,7 +16,7 @@ export const TelemetryBar: React.FC = () => {
 
   return (
     <div className="w-full overflow-x-auto pb-1 pt-1 no-scrollbar">
-      <div className="flex items-center gap-3 sm:gap-4 min-w-[780px] lg:min-w-0">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-[960px] lg:min-w-0">
         {/* KPI 1: Resolution Rate */}
         <KPIStat
           label="Resolution Rate"
@@ -64,6 +65,9 @@ export const TelemetryBar: React.FC = () => {
           accentColor="rose"
           delay={0.25}
         />
+
+        {/* RapidAPI Environmental Telemetry Widget */}
+        <EnvironmentalTelemetry />
       </div>
     </div>
   );
