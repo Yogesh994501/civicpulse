@@ -68,25 +68,52 @@ export const LocationStep: React.FC<LocationStepProps> = ({
 
   const handleAutoGeolocate = async () => {
     setIsGeocoding(true);
-    try {
-      // Simulate/fetch coordinates and call RapidAPI reverse geocoding
+
+    const resolveCoords = async (lat: string, lon: string) => {
+      try {
+        const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data) {
+            setCoordinates(`${lat}° N, ${lon}° E`);
+            setNeighborhood(json.data.neighborhood);
+            setStreetName(json.data.streetName);
+            setGeocodeSource(
+              json.data.source === 'nominatim_open' 
+                ? 'OpenStreetMap GPS Lock' 
+                : json.data.source === 'rapidapi'
+                ? 'RapidAPI Free Geocode'
+                : 'Satellite Radar Lock'
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('Geocoding error:', e);
+      } finally {
+        setIsGeocoding(false);
+      }
+    };
+
+    // Use Browser Native Geolocation API ($0 cost, 0 API calls) if supported
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(4);
+          const lon = pos.coords.longitude.toFixed(4);
+          resolveCoords(lat, lon);
+        },
+        () => {
+          // Fallback to Mumbai ward sector coordinates ($0 cost)
+          const lat = (19.055 + Math.random() * 0.025).toFixed(4);
+          const lon = (72.825 + Math.random() * 0.020).toFixed(4);
+          resolveCoords(lat, lon);
+        },
+        { timeout: 4000 }
+      );
+    } else {
       const lat = (19.055 + Math.random() * 0.025).toFixed(4);
       const lon = (72.825 + Math.random() * 0.020).toFixed(4);
-
-      const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setCoordinates(`${lat}° N, ${lon}° E`);
-          setNeighborhood(json.data.neighborhood);
-          setStreetName(json.data.streetName);
-          setGeocodeSource(json.data.source === 'rapidapi' ? 'RapidAPI Geocode Lock' : 'Satellite Radar Lock');
-        }
-      }
-    } catch (e) {
-      console.warn('Geocoding error:', e);
-    } finally {
-      setIsGeocoding(false);
+      resolveCoords(lat, lon);
     }
   };
 
